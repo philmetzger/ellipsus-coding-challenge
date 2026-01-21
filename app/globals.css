@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
@@ -22,5 +22,176 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Minimalist container matching Ellipsus aesthetic */
+.tiptap-container {
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+  background: #ffffff;
+}
+
+/* Tiptap Editor Styles - Ellipsus aesthetic */
+.ProseMirror {
+  outline: none;
+  min-height: 600px;
+  padding: 3rem 4rem;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: rgba(26, 26, 26, 0.9);
+  max-width: 100%;
+}
+
+/* Placeholder styling */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgba(140, 140, 140, 0.4);
+  pointer-events: none;
+  height: 0;
+}
+
+.ProseMirror p {
+  margin: 0;
+  margin-bottom: 1.25rem;
+}
+
+.ProseMirror p:first-child {
+  margin-top: 0;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-weight: 400;
+  line-height: 1.4;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: rgba(26, 26, 26, 0.85);
+  letter-spacing: -0.015em;
+}
+
+.ProseMirror h1 {
+  font-size: 2.25rem;
+  font-weight: 300;
+  margin-top: 0;
+}
+
+.ProseMirror h2 {
+  font-size: 1.75rem;
+  font-weight: 350;
+}
+
+.ProseMirror h3 {
+  font-size: 1.375rem;
+  font-weight: 375;
+}
+
+.ProseMirror h4 {
+  font-size: 1.125rem;
+}
+
+.ProseMirror h5 {
+  font-size: 1rem;
+}
+
+.ProseMirror h6 {
+  font-size: 0.9375rem;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.75rem;
+  margin: 1.25rem 0;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  margin: 0.5rem 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 2px solid rgba(200, 200, 200, 0.3);
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: rgba(80, 80, 80, 0.75);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.ProseMirror code {
+  background-color: rgba(248, 248, 248, 0.9);
+  padding: 0.2rem 0.45rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: var(--font-geist-mono), monospace;
+  color: rgba(50, 50, 50, 0.85);
+  border: 1px solid rgba(235, 235, 235, 0.6);
+}
+
+.ProseMirror pre {
+  background-color: rgba(250, 250, 250, 0.95);
+  padding: 1.5rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid rgba(240, 240, 240, 0.8);
+}
+
+.ProseMirror pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(220, 220, 220, 0.25);
+  margin: 2.5rem 0;
+  height: 1px;
+}
+
+.ProseMirror strong {
+  font-weight: 500;
+  color: rgba(26, 26, 26, 0.95);
+}
+
+.ProseMirror em {
+  font-style: italic;
+  color: rgba(26, 26, 26, 0.9);
+}
+
+.ProseMirror s {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  color: rgba(26, 26, 26, 0.9);
+}
+
+.ProseMirror li::marker {
+  color: rgba(160, 160, 160, 0.5);
 }
