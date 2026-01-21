@@ -136,7 +136,7 @@ Misspelled words are marked with a CSS class. Add this to your stylesheet:
 
 - **Real-time Spell Checking**: Words are checked as you type with intelligent debouncing
 - **Multi-language Support**: Currently supports English and German, easily extensible
-- **Visual Indicators**: Misspelled words display a red wavy underline
+- **Visual Indicators**: Misspelled words display a light red highlight
 - **Context Menu**: Right-click misspelled words to see suggestions
 - **Fix / Fix All**: Replace single instances or all occurrences at once
 - **Language Switching**: Change languages without page reload
@@ -427,7 +427,7 @@ User types "helllo world "
 ┌───────────────────────────────────────────────────────────┐
 │ Plugin creates decoration for "helllo"                    │
 │ DecorationSet applied to editor view                      │
-│ Word displays with red wavy underline                     │
+│ Word displays with light red highlight                    │
 └───────────────────────────────────────────────────────────┘
 ```
 
