@@ -49,5 +49,17 @@ export const useEditor = ({
     }
   }, [content, editor])
 
+  // Auto-focus editor when it's ready
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      // Small delay to ensure editor is fully rendered
+      const timeoutId = setTimeout(() => {
+        editor.commands.focus('end')
+      }, 0)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [editor])
+
   return { editor }
 }
