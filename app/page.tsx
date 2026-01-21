@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { Editor } from "./components/Editor";
 import { motion } from "framer-motion";
@@ -21,7 +21,7 @@ export default function Home() {
             ease: [0.16, 1, 0.3, 1],
             originY: 0.5,
           }}
-          style={{ transformOrigin: 'center center' }}
+          style={{ transformOrigin: "center center" }}
         >
           <Editor />
         </motion.div>
