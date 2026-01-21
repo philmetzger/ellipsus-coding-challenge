@@ -1,4 +1,4 @@
-import TiptapEditor from './components/TiptapEditor'
+import { Editor } from "./components/Editor";
 
 export default function Home() {
   return (
@@ -10,9 +10,9 @@ export default function Home() {
           </h1>
         </header>
         <div className="tiptap-container rounded-3xl border border-[rgba(0,0,0,0.04)] bg-white">
-          <TiptapEditor />
+          <Editor />
         </div>
       </main>
     </div>
-  )
+  );
 }
