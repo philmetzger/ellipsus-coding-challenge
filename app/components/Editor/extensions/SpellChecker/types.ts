@@ -1,5 +1,5 @@
 import type { LanguageCode } from './utils/constants'
-import type { SpellCheckerService } from './SpellCheckerService'
+import type { SpellCheckerService } from './services/SpellCheckerService'
 
 /**
  * Configuration options for the SpellChecker extension

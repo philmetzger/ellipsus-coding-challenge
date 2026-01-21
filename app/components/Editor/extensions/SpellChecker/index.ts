@@ -1,14 +1,20 @@
 /**
  * SpellChecker Extension for Tiptap
- * Main export file
+ * Main export file - re-exports from organized subdirectories
  */
 
-// Core extension and UI components
-export { SpellCheckerExtension } from './SpellCheckerExtension'
-export { SpellCheckerUI } from './SpellCheckerUI'
-export { SpellCheckerWrapper } from './SpellCheckerWrapper'
-export { ContextMenu } from './ContextMenu'
-export { SpellCheckerControls } from './SpellCheckerControls'
+// Core extension
+export { SpellCheckerExtension } from './core'
+export { createSpellCheckerPlugin } from './core'
+
+// UI components
+export { SpellCheckerUI, SpellCheckerWrapper, ContextMenu, SpellCheckerControls } from './ui'
+
+// Services (for advanced usage)
+export { SpellCheckerService, DictionaryManager, WorkerManager } from './services'
+
+// Hooks
+export { useSpellCheckerExtension, isSpellCheckerEnabled } from './hooks'
 
 // Constants and types
 export { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE } from './utils/constants'

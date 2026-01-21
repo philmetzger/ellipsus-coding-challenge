@@ -7,7 +7,7 @@ import { useEditorMount } from "./hooks/useEditorMount";
 import { useEditor } from "./hooks/useEditor";
 import { EditorPlaceholder } from "./EditorPlaceholder";
 import { defaultEditorConfig } from "./utils/editorConfig";
-import { SpellCheckerWrapper } from "./extensions/SpellChecker/SpellCheckerWrapper";
+import { SpellCheckerWrapper } from "./extensions/SpellChecker";
 
 /**
  * Main Editor component

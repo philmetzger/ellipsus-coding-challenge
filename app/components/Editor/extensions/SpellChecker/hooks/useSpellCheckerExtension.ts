@@ -3,6 +3,8 @@ import type { Editor } from '@tiptap/react'
 import type { Extension } from '@tiptap/core'
 import type { SpellCheckerOptions, SpellCheckerStorage } from '../types'
 
+// Types are imported from parent directory which stays in place
+
 /**
  * Custom hook to find and access the SpellChecker extension from an editor instance
  * Centralizes the extension lookup logic that was duplicated across components
