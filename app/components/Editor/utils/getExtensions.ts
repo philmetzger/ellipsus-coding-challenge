@@ -7,7 +7,7 @@ import { defaultEditorConfig } from './editorConfig'
  * Get base extensions (StarterKit)
  * @returns Array of base Tiptap extensions
  */
-export const getBaseExtensions = (): Extension[] => {
+const getBaseExtensions = (): Extension[] => {
   return [StarterKit]
 }
 
@@ -16,7 +16,7 @@ export const getBaseExtensions = (): Extension[] => {
  * @param placeholder - Placeholder text
  * @returns Configured Placeholder extension
  */
-export const configurePlaceholder = (placeholder?: string): Extension => {
+const configurePlaceholder = (placeholder?: string): Extension => {
   return Placeholder.configure({
     placeholder: placeholder || defaultEditorConfig.defaultPlaceholder,
   })
