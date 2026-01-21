@@ -1,6 +1,5 @@
 import { EditorPlaceholderProps } from './types/editor.types'
-import { sizeConfig } from './utils/editorConfig'
-import { defaultEditorConfig } from './utils/editorConfig'
+import { sizeConfig, defaultEditorConfig } from './utils/editorConfig'
 
 /**
  * Placeholder component shown during SSR or while editor is loading

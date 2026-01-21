@@ -21,6 +21,8 @@ export interface EditorProps {
   size?: EditorSize
   /** Additional CSS classes */
   className?: string
+  /** Callback function called when editor is ready */
+  onEditorReady?: (editor: ReturnType<typeof import('@tiptap/react').useEditor>) => void
 }
 
 /**
@@ -65,16 +67,4 @@ export interface EditorPlaceholderProps {
   placeholder?: string
   /** Size of the placeholder */
   size?: EditorSize
-}
-
-/**
- * Props for EditorContentWrapper component
- */
-export interface EditorContentWrapperProps {
-  /** Child elements to wrap */
-  children: React.ReactNode
-  /** Paragraph spacing option */
-  paragraphSpacing?: 'none' | 's' | 'm' | 'l'
-  /** Size of the content */
-  size?: 's' | 'm'
 }

@@ -195,3 +195,14 @@ body {
 .ProseMirror li::marker {
   color: rgba(160, 160, 160, 0.5);
 }
+
+/* Spellchecker styles */
+.ProseMirror .spellcheck-misspelled {
+  background-color: rgba(254, 226, 226, 0.8); /* Light red background - always visible */
+  cursor: pointer;
+  position: relative;
+}
+
+.ProseMirror .spellcheck-misspelled:hover {
+  background-color: rgba(254, 226, 226, 0.95); /* Slightly darker on hover */
+}

@@ -2,6 +2,7 @@
 
 import { Editor } from "./components/Editor";
 import { motion } from "framer-motion";
+import { SpellCheckerExtension } from "./components/Editor/extensions/SpellChecker";
 
 export default function Home() {
   return (
@@ -23,7 +24,7 @@ export default function Home() {
           }}
           style={{ transformOrigin: "center center" }}
         >
-          <Editor />
+          <Editor extensions={[SpellCheckerExtension.configure()]} />
         </motion.div>
       </main>
     </div>
