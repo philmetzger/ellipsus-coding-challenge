@@ -24,6 +24,8 @@ export interface SpellCheckerStorage {
   contextMenuState: ContextMenuState | null;
   /** SpellChecker service instance for word checking */
   spellCheckerService?: SpellCheckerService;
+  /** Callback for context menu state changes (used by SpellCheckerProvider) */
+  onContextMenuChange?: (state: ContextMenuState | null) => void;
 }
 
 /**

@@ -6,12 +6,7 @@ import { DictionaryManager } from "../services/DictionaryManager";
 import { SpellCheckerService } from "../services/SpellCheckerService";
 import { createSpellCheckerPlugin } from "./SpellCheckerPlugin";
 import { findAllInstances } from "../utils/wordExtractor";
-import {
-  DEFAULT_DEBOUNCE_MS,
-  DEFAULT_LANGUAGE,
-  SPELLCHECK_CONTEXT_MENU_EVENT,
-  SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
-} from "../utils/constants";
+import { DEFAULT_DEBOUNCE_MS, DEFAULT_LANGUAGE } from "../utils/constants";
 import type { LanguageCode } from "../utils/constants";
 import type {
   SpellCheckerOptions,
@@ -86,28 +81,19 @@ export const SpellCheckerExtension = Extension.create<
       getLanguage: () => this.storage.language,
       getScanGeneration: () => this.storage.scanGeneration,
       onContextMenu: (state) => {
-        // Verify still enabled before dispatching
+        // Verify still enabled before notifying
         if (!this.options.enabled) {
-          return; // Don't dispatch if disabled
+          return; // Don't notify if disabled
         }
 
         this.storage.contextMenuState = state;
-        // Dispatch custom event for React component
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent(SPELLCHECK_CONTEXT_MENU_EVENT, {
-              detail: state,
-            }),
-          );
-        }
+        // Notify React context via callback
+        this.storage.onContextMenuChange?.(state);
       },
       onDismissContextMenu: () => {
         this.storage.contextMenuState = null;
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent(SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT),
-          );
-        }
+        // Notify React context via callback
+        this.storage.onContextMenuChange?.(null);
       },
     });
 
@@ -151,11 +137,8 @@ export const SpellCheckerExtension = Extension.create<
               // Dismiss context menu if open
               if (this.storage.contextMenuState) {
                 this.storage.contextMenuState = null;
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(
-                    new CustomEvent(SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT),
-                  );
-                }
+                // Notify React context via callback
+                this.storage.onContextMenuChange?.(null);
               }
             } else {
               // When enabling: load dictionary and trigger scan

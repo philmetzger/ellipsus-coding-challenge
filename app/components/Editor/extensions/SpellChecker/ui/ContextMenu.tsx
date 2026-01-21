@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import type { Editor } from "@tiptap/react";
-import type { ContextMenuState } from "../types";
-import {
-  CONTEXT_MENU_DELAY_MS,
-  SPELLCHECK_CONTEXT_MENU_EVENT,
-  SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
-} from "../utils/constants";
+import { useEffect, useRef } from "react";
+import { CONTEXT_MENU_DELAY_MS } from "../utils/constants";
 import { contextMenuStyles, hoverHandlers } from "./styles";
 import {
   useSpellCheckerExtension,
   isSpellCheckerEnabled,
 } from "../hooks/useSpellCheckerExtension";
+import { useSpellCheckerContext } from "./SpellCheckerContext";
+import type { Editor } from "@tiptap/react";
 
 interface ContextMenuProps {
   editor: Editor | null;
@@ -20,54 +16,38 @@ interface ContextMenuProps {
 
 /**
  * ContextMenu component for displaying spelling suggestions
- * Listens to custom events from the SpellCheckerPlugin
+ * Uses React Context for state management (scoped per-editor instance)
  */
 export function ContextMenu({ editor }: ContextMenuProps) {
-  const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const justOpenedRef = useRef<boolean>(false);
+
+  // Get context menu state and actions from context
+  const spellCheckerContext = useSpellCheckerContext();
 
   // Find spellchecker extension to check enabled state
   const extension = useSpellCheckerExtension(editor);
 
+  const menuState = spellCheckerContext?.contextMenu ?? null;
+  const dismissContextMenu = spellCheckerContext?.dismissContextMenu;
+  const fixWord = spellCheckerContext?.fixWord;
+  const fixAllInstances = spellCheckerContext?.fixAllInstances;
+
+  // Track when menu is opened to prevent immediate dismissal
   useEffect(() => {
-    if (!editor) return;
-
-    const handleContextMenu = (event: CustomEvent<ContextMenuState>) => {
-      // Verify extension is still enabled before showing menu
-      const currentExtension = editor?.extensionManager?.extensions?.find(
-        (ext) => ext.name === "spellChecker",
-      );
-      if (!currentExtension?.options?.enabled) {
-        return; // Don't show menu if disabled
-      }
-
-      setMenuState(event.detail);
-      // Mark that menu was just opened to prevent immediate dismissal
+    if (menuState?.visible) {
       justOpenedRef.current = true;
-      // Delay to allow React to render before enabling dismissal
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         justOpenedRef.current = false;
       }, CONTEXT_MENU_DELAY_MS);
-    };
+      return () => clearTimeout(timeout);
+    }
+  }, [menuState?.visible]);
 
-    const handleDismiss = () => {
-      setMenuState(null);
-    };
+  // Handle click outside and scroll to dismiss menu
+  useEffect(() => {
+    if (!menuState?.visible) return;
 
-    // Listen for context menu events
-    window.addEventListener(
-      SPELLCHECK_CONTEXT_MENU_EVENT,
-      handleContextMenu as EventListener,
-    );
-    window.addEventListener(
-      SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
-      handleDismiss,
-    );
-
-    // Dismiss on outside click
-    // Use mouseup instead of mousedown to avoid conflicts with right-click
-    // mouseup fires after contextmenu, giving us time to set the flag
     const handleClickOutside = (event: MouseEvent) => {
       // Ignore right mouse button clicks (button === 2)
       if (event.button === 2) {
@@ -81,13 +61,12 @@ export function ContextMenu({ editor }: ContextMenuProps) {
 
       // Only dismiss if clicking outside the menu
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuState(null);
+        dismissContextMenu?.();
       }
     };
 
-    // Dismiss on scroll
     const handleScroll = () => {
-      setMenuState(null);
+      dismissContextMenu?.();
     };
 
     // Use mouseup instead of mousedown - it fires after contextmenu
@@ -95,61 +74,28 @@ export function ContextMenu({ editor }: ContextMenuProps) {
     window.addEventListener("scroll", handleScroll, true);
 
     return () => {
-      window.removeEventListener(
-        SPELLCHECK_CONTEXT_MENU_EVENT,
-        handleContextMenu as EventListener,
-      );
-      window.removeEventListener(
-        SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
-        handleDismiss,
-      );
       document.removeEventListener("mouseup", handleClickOutside);
       window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [editor]);
+  }, [menuState?.visible, dismissContextMenu]);
 
-  // Monitor enabled state and dismiss menu when disabled
+  // Dismiss menu when spellchecker is disabled
   useEffect(() => {
-    if (!editor) return;
-
-    const currentExtension = editor?.extensionManager?.extensions?.find(
-      (ext) => ext.name === "spellChecker",
-    );
-
-    // Dismiss menu if spellchecker is disabled
-    if (!currentExtension?.options?.enabled && menuState) {
-      setMenuState(null);
+    const isEnabled = isSpellCheckerEnabled(extension);
+    if (!isEnabled && menuState?.visible) {
+      dismissContextMenu?.();
     }
-  }, [editor, menuState]);
+  }, [extension, menuState?.visible, dismissContextMenu]);
 
   const handleFix = (suggestion: string) => {
-    if (!menuState?.wordRange || !editor) return;
-
+    if (!menuState?.wordRange) return;
     const { from, to } = menuState.wordRange;
-
-    editor
-      .chain()
-      .focus()
-      .setTextSelection({ from, to })
-      .deleteSelection()
-      .insertContent(suggestion)
-      .run();
-
-    setMenuState(null);
+    fixWord?.(from, to, suggestion);
   };
 
   const handleFixAll = (suggestion: string) => {
-    if (!menuState?.word || !editor) return;
-
-    if ("replaceAllInstances" in editor.commands) {
-      (
-        editor.commands as {
-          replaceAllInstances: (word: string, replacement: string) => void;
-        }
-      ).replaceAllInstances(menuState.word, suggestion);
-    }
-
-    setMenuState(null);
+    if (!menuState?.word) return;
+    fixAllInstances?.(menuState.word, suggestion);
   };
 
   // Check enabled state before showing menu

@@ -16,14 +16,6 @@ export const DICTIONARY_RETRY_COUNT = 3;
 export const DICTIONARY_RETRY_DELAY_MS = 50;
 
 /**
- * Custom event names for spellchecker communication
- * Used for communication between plugin and React components
- */
-export const SPELLCHECK_CONTEXT_MENU_EVENT = "spellcheck-context-menu";
-export const SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT =
-  "spellcheck-context-menu-dismiss";
-
-/**
  * Available languages for spell checking
  */
 export const AVAILABLE_LANGUAGES = [

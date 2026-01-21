@@ -160,6 +160,14 @@ The extension follows a layered architecture with clear separation of concerns:
 │           └───────────────────┴───────────────────┘          │
 │                              │                               │
 ├──────────────────────────────┼───────────────────────────────┤
+│                     CONTEXT LAYER                            │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  SpellCheckerProvider (React Context)                    ││
+│  │  - Scoped state per editor instance                      ││
+│  │  - Context menu state & actions                          ││
+│  └─────────────────────────────────────────────────────────┘│
+│                              │                               │
+├──────────────────────────────┼───────────────────────────────┤
 │                     EXTENSION LAYER                          │
 │  ┌─────────────────────────┐ ┌─────────────────────────┐    │
 │  │  SpellCheckerExtension  │ │   SpellCheckerPlugin    │    │
@@ -187,6 +195,7 @@ The extension follows a layered architecture with clear separation of concerns:
 | Layer | Responsibility |
 |-------|----------------|
 | **UI Layer** | React components for user interaction |
+| **Context Layer** | Scoped state management per editor instance via React Context |
 | **Extension Layer** | Tiptap/ProseMirror integration, commands, decorations |
 | **Service Layer** | Caching, batching, dictionary management, worker communication |
 | **Worker Thread** | Actual spell checking using nspell library |
@@ -215,6 +224,7 @@ interface SpellCheckerStorage {
   scanGeneration: number        // Invalidates stale operations
   contextMenuState: ContextMenuState | null
   spellCheckerService?: SpellCheckerService
+  onContextMenuChange?: (state: ContextMenuState | null) => void  // Context callback
 }
 ```
 
@@ -318,26 +328,44 @@ A custom dropdown for language selection:
 - **Loading state**: Shows spinner during dictionary loading
 - **Accessible**: Keyboard navigation and focus management
 
+#### `SpellCheckerContext.tsx`
+
+The React Context provider that scopes state per-editor instance:
+
+- **Context menu state**: Manages `ContextMenuState` via `useState`
+- **Callback registration**: Registers `onContextMenuChange` callback with extension storage
+- **Actions**: Exposes `dismissContextMenu`, `fixWord`, `fixAllInstances`
+- **Hook**: Exports `useSpellCheckerContext()` for consuming components
+
+```typescript
+interface SpellCheckerContextValue {
+  contextMenu: ContextMenuState | null
+  dismissContextMenu: () => void
+  fixWord: (from: number, to: number, replacement: string) => void
+  fixAllInstances: (word: string, replacement: string) => void
+}
+```
+
 #### `ContextMenu.tsx`
 
 The right-click suggestions menu:
 
-- **Event-driven**: Listens for custom events from the plugin
+- **Context-driven**: Uses `useSpellCheckerContext()` hook to get state and actions
 - **Positioned at cursor**: Uses click coordinates for placement
 - **Auto-dismiss**: Closes on outside click, scroll, or spellchecker disable
 - **Actions**: "Fix" (single) and "Fix all" (global replace)
 
 #### `SpellCheckerWrapper.tsx`
 
-A simple wrapper component that renders the UI alongside the editor content:
+A wrapper component that provides context and renders the UI alongside the editor content:
 
 ```tsx
 export function SpellCheckerWrapper({ editor, children }: Props) {
   return (
-    <>
+    <SpellCheckerProvider editor={editor}>
       <SpellCheckerUI editor={editor} />
       {children}
-    </>
+    </SpellCheckerProvider>
   )
 }
 ```
@@ -451,19 +479,25 @@ User right-clicks "helllo"
         │
         ▼
 ┌───────────────────────────────────────────────────────────┐
-│ Dispatches CustomEvent("spellcheck-context-menu")         │
-│ Detail: { word, position, suggestions, wordRange }        │
+│ Extension calls storage.onContextMenuChange(state)        │
+│ State: { word, position, suggestions, wordRange }         │
 └───────────────────────────────────────────────────────────┘
         │
         ▼
 ┌───────────────────────────────────────────────────────────┐
-│ ContextMenu component receives event                      │
+│ SpellCheckerProvider receives callback                    │
+│ Updates React Context state via setContextMenu            │
+└───────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────┐
+│ ContextMenu reads state via useSpellCheckerContext()      │
 │ Renders menu at click position with suggestions           │
 └───────────────────────────────────────────────────────────┘
         │
         ▼ (User clicks "Fix")
 ┌───────────────────────────────────────────────────────────┐
-│ handleFix("hello")                                        │
+│ context.fixWord(from, to, "hello")                        │
 │ editor.chain().setTextSelection().deleteSelection()       │
 │       .insertContent("hello").run()                       │
 │ Document updated → triggers new scan                      │
@@ -654,7 +688,7 @@ This bundles nspell and its dependencies into a single file that can be loaded v
 
 ## State Management
 
-### Three Levels of State
+### Four Levels of State
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -667,7 +701,8 @@ This bundles nspell and its dependencies into a single file that can be loaded v
 │    language: 'en' | 'de',                                   │
 │    scanGeneration: number,      // Staleness counter        │
 │    contextMenuState: {...},     // Current menu state       │
-│    spellCheckerService: Service // Service instance         │
+│    spellCheckerService: Service,// Service instance         │
+│    onContextMenuChange: fn      // Context callback         │
 │  }                                                          │
 └─────────────────────────────────────────────────────────────┘
 
@@ -681,6 +716,18 @@ This bundles nspell and its dependencies into a single file that can be loaded v
 │    shouldRescan: boolean,       // Scan trigger flag        │
 │    generation: number           // Current generation       │
 │  }                                                          │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   REACT CONTEXT STATE                        │
+│  Managed by: SpellCheckerProvider                           │
+│  Scoped to: Each editor instance                            │
+│                                                             │
+│  {                                                          │
+│    contextMenu: ContextMenuState | null  // Menu state      │
+│  }                                                          │
+│                                                             │
+│  Actions: dismissContextMenu, fixWord, fixAllInstances      │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -814,34 +861,44 @@ The SpellChecker uses a **composition pattern** for integrating with the Editor:
 
 ### Communication Between Extension and UI
 
-The SpellChecker uses **window events** for communication between the ProseMirror plugin and React UI:
+The SpellChecker uses **React Context** for communication between the ProseMirror plugin and React UI. This provides scoped state per-editor instance:
 
 ```typescript
-// In SpellCheckerPlugin (ProseMirror layer)
-window.dispatchEvent(new CustomEvent('spellcheck-context-menu', { detail: state }))
+// In SpellCheckerExtension (Extension layer)
+// Extension storage has a callback that Context Provider registers
+this.storage.onContextMenuChange?.(state)
 
-// In ContextMenu (React layer)
-window.addEventListener('spellcheck-context-menu', handleContextMenu)
+// In SpellCheckerProvider (Context layer)
+// Registers callback with extension storage
+useEffect(() => {
+  const ext = editor.extensionManager.extensions.find(e => e.name === 'spellChecker')
+  if (ext?.storage) {
+    ext.storage.onContextMenuChange = setContextMenu
+  }
+  return () => { ext.storage.onContextMenuChange = undefined }
+}, [editor])
+
+// In ContextMenu (UI layer)
+// Consumes context via hook
+const { contextMenu, fixWord, fixAllInstances } = useSpellCheckerContext()
 ```
 
-**Trade-offs of this approach:**
+**Benefits of this approach:**
 
 | Aspect | Evaluation |
 |--------|------------|
-| Simplicity | ✅ Simple to implement, minimal boilerplate |
-| Decoupling | ✅ Plugin doesn't need React references |
-| Multiple editors | ⚠️ Events broadcast globally (see note below) |
-| Testability | ⚠️ Requires window event mocking in tests |
-
-**Note on multiple editors**: If you have multiple editor instances on the same page, context menu events will be received by all ContextMenu components. The current implementation handles this by checking if the event's editor matches the component's editor prop.
+| Scoping | ✅ State is scoped per-editor instance |
+| Multiple editors | ✅ Each editor has its own context (works correctly) |
+| Testability | ✅ Easy to test (mock context, no window events) |
+| React-idiomatic | ✅ Standard React patterns, clear data flow |
+| Decoupling | ✅ Extension doesn't need React references (uses callback) |
 
 ### Alternative Approaches (Not Implemented)
 
 For more complex use cases, consider these alternatives:
 
-1. **React Context**: Scope state per-editor instance, eliminates global events
-2. **Headless hooks**: `useSpellChecker(editor)` returns state and actions for custom UI
-3. **Slot/render props**: Editor accepts UI components as props
+1. **Headless hooks**: `useSpellChecker(editor)` returns state and actions for custom UI
+2. **Slot/render props**: Editor accepts UI components as props
 
 ---
 
@@ -858,7 +915,7 @@ For more complex use cases, consider these alternatives:
 | **Generation pattern** | Handles race conditions without complex cancellation logic |
 | **SSR-safe** | Works with Next.js and other SSR frameworks |
 | **Singleton managers** | Shared state across multiple editor instances |
-| **Event-driven context menu** | Decouples ProseMirror plugin from React |
+| **React Context for UI** | Scoped state per-editor, easy testing, React-idiomatic |
 
 ### Limitations
 
@@ -980,59 +1037,9 @@ const fullDictionary = fetch('/api/dictionary/en/full')  // Background
 
 ### Integration Architecture Improvements
 
-The current implementation uses window events for communication between the ProseMirror plugin and React UI. For more advanced use cases, consider these architectural improvements:
+For more advanced use cases, consider these architectural improvements:
 
-#### 6. React Context Provider
-
-Replace window events with React Context for scoped state per-editor instance:
-
-```tsx
-// SpellCheckerContext.tsx
-interface SpellCheckerContextValue {
-  isEnabled: boolean
-  language: LanguageCode
-  isLoading: boolean
-  contextMenu: ContextMenuState | null
-  toggle: (enabled?: boolean) => void
-  setLanguage: (lang: LanguageCode) => Promise<void>
-  dismissContextMenu: () => void
-  fixWord: (from: number, to: number, replacement: string) => void
-}
-
-const SpellCheckerContext = createContext<SpellCheckerContextValue | null>(null)
-
-export function SpellCheckerProvider({ editor, children }) {
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
-
-  useEffect(() => {
-    if (!editor) return
-    
-    // Register callback with extension instead of using window events
-    const ext = editor.extensionManager.extensions.find(e => e.name === 'spellChecker')
-    if (ext?.storage) {
-      ext.storage.onContextMenuChange = setContextMenu
-    }
-    
-    return () => {
-      if (ext?.storage) ext.storage.onContextMenuChange = undefined
-    }
-  }, [editor])
-
-  return (
-    <SpellCheckerContext.Provider value={{ contextMenu, ... }}>
-      {children}
-    </SpellCheckerContext.Provider>
-  )
-}
-```
-
-**Benefits:**
-- Works with multiple editor instances (context is scoped)
-- React-idiomatic state management
-- Easier to test (no window event mocking)
-- Clear data flow
-
-#### 7. Headless UI Pattern
+#### 6. Headless UI Pattern
 
 Expose a `useSpellChecker` hook that returns state and actions, letting consumers build custom UI:
 
@@ -1040,8 +1047,8 @@ Expose a `useSpellChecker` hook that returns state and actions, letting consumer
 // useSpellChecker.ts
 export function useSpellChecker(editor: Editor | null) {
   const extension = useSpellCheckerExtension(editor)
+  const context = useSpellCheckerContext()
   const [isLoading, setIsLoading] = useState(false)
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   const toggle = useCallback((enabled?: boolean) => {
     editor?.commands.toggleSpellChecker(enabled)
@@ -1060,11 +1067,11 @@ export function useSpellChecker(editor: Editor | null) {
     isEnabled: extension?.options?.enabled ?? false,
     language: extension?.options?.language ?? 'en',
     isLoading,
-    contextMenu,
+    contextMenu: context?.contextMenu ?? null,
     toggle,
     setLanguage,
-    fixWord: (from, to, replacement) => { /* ... */ },
-    fixAllInstances: (word, replacement) => { /* ... */ },
+    fixWord: context?.fixWord ?? (() => {}),
+    fixAllInstances: context?.fixAllInstances ?? (() => {}),
   }
 }
 
@@ -1090,7 +1097,7 @@ function MyCustomSpellChecker({ editor }) {
 - Easier to theme/customize
 - Can be used with any component library
 
-#### 8. Slot/Render Props Pattern
+#### 7. Slot/Render Props Pattern
 
 Let the Editor accept UI components as props for clean extension points:
 
@@ -1222,32 +1229,38 @@ SpellChecker/
 ├── index.ts                    # Public exports
 ├── README.md                   # This documentation
 ├── types.ts                    # TypeScript interfaces
-├── styles.ts                   # Extracted CSS-in-JS styles
 │
-├── SpellCheckerExtension.ts    # Tiptap extension entry point
-├── SpellCheckerPlugin.ts       # ProseMirror plugin
-├── SpellCheckerService.ts      # Caching and batching service
-├── DictionaryManager.ts        # Dictionary loading singleton
-├── WorkerManager.ts            # Worker communication singleton
+├── core/
+│   ├── index.ts                # Core exports
+│   ├── SpellCheckerExtension.ts    # Tiptap extension entry point
+│   └── SpellCheckerPlugin.ts       # ProseMirror plugin
 │
-├── SpellCheckerUI.tsx          # Main UI component
-├── SpellCheckerControls.tsx    # Language dropdown
-├── ContextMenu.tsx             # Right-click suggestions
-├── SpellCheckerWrapper.tsx     # Container component
+├── services/
+│   ├── index.ts                # Service exports
+│   ├── SpellCheckerService.ts      # Caching and batching service
+│   ├── DictionaryManager.ts        # Dictionary loading singleton
+│   └── WorkerManager.ts            # Worker communication singleton
+│
+├── ui/
+│   ├── index.ts                # UI exports
+│   ├── styles.ts               # Extracted CSS-in-JS styles
+│   ├── SpellCheckerContext.tsx     # React Context provider (scoped state)
+│   ├── SpellCheckerUI.tsx          # Main UI component
+│   ├── SpellCheckerControls.tsx    # Language dropdown
+│   ├── ContextMenu.tsx             # Right-click suggestions
+│   └── SpellCheckerWrapper.tsx     # Container component with Provider
 │
 ├── hooks/
+│   ├── index.ts                # Hooks exports
 │   └── useSpellCheckerExtension.ts  # Extension access hook
 │
 ├── utils/
+│   ├── index.ts                # Utils exports
 │   ├── constants.ts            # Configuration constants
 │   ├── wordExtractor.ts        # Word extraction utilities
 │   └── debounce.ts             # Debounce utility
 │
-└── __tests__/                  # Unit tests
-    ├── SpellCheckerExtension.test.ts
-    ├── SpellCheckerService.test.ts
-    ├── DictionaryManager.test.ts
-    └── ...
+└── (tests in __tests__/ subdirectories)
 ```
 
 ### Related Files (Outside Extension)
