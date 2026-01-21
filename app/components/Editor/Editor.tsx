@@ -1,12 +1,11 @@
-'use client'
+"use client";
 
-import { EditorContent } from '@tiptap/react'
-import { EditorProps } from './types/editor.types'
-import { useEditorMount } from './hooks/useEditorMount'
-import { useEditor } from './hooks/useEditor'
-import { EditorPlaceholder } from './EditorPlaceholder'
-import { EditorContentWrapper } from './EditorContentWrapper'
-import { defaultEditorConfig } from './utils/editorConfig'
+import { EditorContent } from "@tiptap/react";
+import { EditorProps } from "./types/editor.types";
+import { useEditorMount } from "./hooks/useEditorMount";
+import { useEditor } from "./hooks/useEditor";
+import { EditorPlaceholder } from "./EditorPlaceholder";
+import { defaultEditorConfig } from "./utils/editorConfig";
 
 /**
  * Main Editor component
@@ -20,25 +19,23 @@ export const Editor = ({
   size = defaultEditorConfig.defaultSize,
   className,
 }: EditorProps) => {
-  const isMounted = useEditorMount()
+  const isMounted = useEditorMount();
   const { editor } = useEditor({
     content,
     extensions,
     placeholder,
     onUpdate,
-  })
+  });
 
   if (!isMounted || !editor) {
-    return <EditorPlaceholder placeholder={placeholder} size={size} />
+    return <EditorPlaceholder placeholder={placeholder} size={size} />;
   }
 
   return (
     <div className={className}>
-      <EditorContentWrapper>
-        <EditorContent editor={editor} />
-      </EditorContentWrapper>
+      <EditorContent editor={editor} />
     </div>
-  )
-}
+  );
+};
 
-export default Editor
+export default Editor;
