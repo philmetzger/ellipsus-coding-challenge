@@ -1,4 +1,7 @@
+'use client'
+
 import { Editor } from "./components/Editor";
+import { motion } from "framer-motion";
 
 export default function Home() {
   return (
@@ -9,9 +12,19 @@ export default function Home() {
             Ellipsus Coding Challenge - Tiptap Spellchecker
           </h1>
         </header>
-        <div className="tiptap-container rounded-3xl border border-[rgba(0,0,0,0.04)] bg-white">
+        <motion.div
+          className="tiptap-container rounded-3xl border border-[rgba(0,0,0,0.04)] bg-white"
+          initial={{ scaleY: 0, opacity: 0 }}
+          animate={{ scaleY: 1, opacity: 1 }}
+          transition={{
+            duration: 0.6,
+            ease: [0.16, 1, 0.3, 1],
+            originY: 0.5,
+          }}
+          style={{ transformOrigin: 'center center' }}
+        >
           <Editor />
-        </div>
+        </motion.div>
       </main>
     </div>
   );
