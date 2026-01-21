@@ -1,10 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import type { Editor as TiptapEditor } from "@tiptap/react";
 import { Editor } from "./components/Editor";
-import { motion } from "framer-motion";
-import { SpellCheckerExtension } from "./components/Editor/extensions/SpellChecker";
+import {
+  SpellCheckerExtension,
+  SpellCheckerWrapper,
+} from "./components/Editor/extensions/SpellChecker";
 
 export default function Home() {
+  // Track editor instance for SpellCheckerWrapper
+  const [editor, setEditor] = useState<TiptapEditor | null>(null);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#fafafa] font-sans py-16">
       <main className="w-full max-w-5xl px-8">
@@ -14,7 +21,13 @@ export default function Home() {
           </h1>
         </header>
         <div className="tiptap-container rounded-3xl border border-[rgba(0,0,0,0.04)] bg-white">
-          <Editor extensions={[SpellCheckerExtension.configure()]} />
+          {/* Consumer controls UI placement via composition */}
+          <SpellCheckerWrapper editor={editor}>
+            <Editor
+              extensions={[SpellCheckerExtension.configure()]}
+              onEditorReady={setEditor}
+            />
+          </SpellCheckerWrapper>
         </div>
       </main>
     </div>

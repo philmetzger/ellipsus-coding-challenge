@@ -57,8 +57,12 @@ export function SpellCheckerControls({
           onClick={() => !isLoading && setIsOpen(!isOpen)}
           disabled={isLoading}
           style={controlsStyles.dropdownButton(isLoading, isOpen)}
-          onMouseEnter={(e) => hoverHandlers.dropdownButton.onMouseEnter(e, isLoading, isOpen)}
-          onMouseLeave={(e) => hoverHandlers.dropdownButton.onMouseLeave(e, isOpen)}
+          onMouseEnter={(e) =>
+            hoverHandlers.dropdownButton.onMouseEnter(e, isLoading, isOpen)
+          }
+          onMouseLeave={(e) =>
+            hoverHandlers.dropdownButton.onMouseLeave(e, isOpen)
+          }
           onFocus={(e) => hoverHandlers.dropdownButton.onFocus(e, isLoading)}
           onBlur={(e) => hoverHandlers.dropdownButton.onBlur(e, isOpen)}
         >
@@ -129,8 +133,16 @@ export function SpellCheckerControls({
                   }}
                   disabled={isLoading}
                   style={controlsStyles.optionButton(isSelected, isLoading)}
-                  onMouseEnter={(e) => hoverHandlers.optionButton.onMouseEnter(e, isSelected, isLoading)}
-                  onMouseLeave={(e) => hoverHandlers.optionButton.onMouseLeave(e, isSelected)}
+                  onMouseEnter={(e) =>
+                    hoverHandlers.optionButton.onMouseEnter(
+                      e,
+                      isSelected,
+                      isLoading,
+                    )
+                  }
+                  onMouseLeave={(e) =>
+                    hoverHandlers.optionButton.onMouseLeave(e, isSelected)
+                  }
                 >
                   <div style={controlsStyles.optionLabel(isSelected)}>
                     Spellchecker

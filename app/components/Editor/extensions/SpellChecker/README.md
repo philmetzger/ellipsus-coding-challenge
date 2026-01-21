@@ -23,10 +23,51 @@ A comprehensive, production-ready spell checking extension for Tiptap editors. T
 
 ### Basic Usage
 
-Add the SpellChecker extension to your Tiptap editor:
+Add the SpellChecker extension to your Tiptap editor using the **composition pattern**:
 
 ```tsx
-import { Editor } from '@tiptap/react'
+import { useState } from "react";
+import type { Editor as TiptapEditor } from "@tiptap/react";
+import { Editor } from "./components/Editor";
+import {
+  SpellCheckerExtension,
+  SpellCheckerWrapper,
+} from "./components/Editor/extensions/SpellChecker";
+
+function MyPage() {
+  // Track editor instance for SpellCheckerWrapper
+  const [editor, setEditor] = useState<TiptapEditor | null>(null);
+
+  return (
+    <SpellCheckerWrapper editor={editor}>
+      <Editor
+        extensions={[SpellCheckerExtension.configure({
+          enabled: true,
+          language: 'en',
+          debounceMs: 400,
+        })]}
+        onEditorReady={setEditor}
+      />
+    </SpellCheckerWrapper>
+  );
+}
+```
+
+### Why Composition?
+
+The SpellChecker UI is composed **at the usage site** rather than hardcoded in the Editor component. This design choice provides:
+
+1. **Editor remains extension-agnostic**: The Editor component has no knowledge of SpellChecker
+2. **Consumer controls UI placement**: You decide where the controls and context menu appear
+3. **Extensibility**: Adding new extensions doesn't require modifying the Editor component
+4. **Optional UI**: Use the extension without UI, or build your own custom UI
+
+### Alternative: Direct Tiptap Usage
+
+If you're using Tiptap directly (not the Editor component wrapper):
+
+```tsx
+import { useEditor, EditorContent } from '@tiptap/react'
 import { SpellCheckerExtension, SpellCheckerWrapper } from './extensions/SpellChecker'
 
 function MyEditor() {
@@ -36,7 +77,6 @@ function MyEditor() {
       SpellCheckerExtension.configure({
         enabled: true,
         language: 'en',
-        debounceMs: 400,
       }),
     ],
     content: '<p>Start typing here...</p>',
@@ -747,6 +787,64 @@ const handleSpellcheckerChange = async (value) => {
 
 ---
 
+## Integration Design
+
+### Composition Pattern
+
+The SpellChecker uses a **composition pattern** for integrating with the Editor:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      page.tsx (Consumer)                     │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              SpellCheckerWrapper                         ││
+│  │  ┌────────────────┐  ┌─────────────────────────────────┐││
+│  │  │SpellCheckerUI  │  │         Editor                  │││
+│  │  │ (Controls +    │  │  (Extension-agnostic)           │││
+│  │  │  ContextMenu)  │  │  ┌─────────────────────────────┐│││
+│  │  │                │  │  │   EditorContent             ││││
+│  │  └────────────────┘  │  │   + SpellCheckerExtension   ││││
+│  │                      │  └─────────────────────────────┘│││
+│  │                      └─────────────────────────────────┘││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Principle**: The extension owns its logic (checking, decorations, commands), but the **consumer owns UI placement**.
+
+### Communication Between Extension and UI
+
+The SpellChecker uses **window events** for communication between the ProseMirror plugin and React UI:
+
+```typescript
+// In SpellCheckerPlugin (ProseMirror layer)
+window.dispatchEvent(new CustomEvent('spellcheck-context-menu', { detail: state }))
+
+// In ContextMenu (React layer)
+window.addEventListener('spellcheck-context-menu', handleContextMenu)
+```
+
+**Trade-offs of this approach:**
+
+| Aspect | Evaluation |
+|--------|------------|
+| Simplicity | ✅ Simple to implement, minimal boilerplate |
+| Decoupling | ✅ Plugin doesn't need React references |
+| Multiple editors | ⚠️ Events broadcast globally (see note below) |
+| Testability | ⚠️ Requires window event mocking in tests |
+
+**Note on multiple editors**: If you have multiple editor instances on the same page, context menu events will be received by all ContextMenu components. The current implementation handles this by checking if the event's editor matches the component's editor prop.
+
+### Alternative Approaches (Not Implemented)
+
+For more complex use cases, consider these alternatives:
+
+1. **React Context**: Scope state per-editor instance, eliminates global events
+2. **Headless hooks**: `useSpellChecker(editor)` returns state and actions for custom UI
+3. **Slot/render props**: Editor accepts UI components as props
+
+---
+
 ## Design Decisions and Trade-offs
 
 ### Advantages
@@ -879,6 +977,162 @@ const fullDictionary = fetch('/api/dictionary/en/full')  // Background
 // Check common words first (covers 90% of text)
 // Fall back to full dictionary when loaded
 ```
+
+### Integration Architecture Improvements
+
+The current implementation uses window events for communication between the ProseMirror plugin and React UI. For more advanced use cases, consider these architectural improvements:
+
+#### 6. React Context Provider
+
+Replace window events with React Context for scoped state per-editor instance:
+
+```tsx
+// SpellCheckerContext.tsx
+interface SpellCheckerContextValue {
+  isEnabled: boolean
+  language: LanguageCode
+  isLoading: boolean
+  contextMenu: ContextMenuState | null
+  toggle: (enabled?: boolean) => void
+  setLanguage: (lang: LanguageCode) => Promise<void>
+  dismissContextMenu: () => void
+  fixWord: (from: number, to: number, replacement: string) => void
+}
+
+const SpellCheckerContext = createContext<SpellCheckerContextValue | null>(null)
+
+export function SpellCheckerProvider({ editor, children }) {
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+
+  useEffect(() => {
+    if (!editor) return
+    
+    // Register callback with extension instead of using window events
+    const ext = editor.extensionManager.extensions.find(e => e.name === 'spellChecker')
+    if (ext?.storage) {
+      ext.storage.onContextMenuChange = setContextMenu
+    }
+    
+    return () => {
+      if (ext?.storage) ext.storage.onContextMenuChange = undefined
+    }
+  }, [editor])
+
+  return (
+    <SpellCheckerContext.Provider value={{ contextMenu, ... }}>
+      {children}
+    </SpellCheckerContext.Provider>
+  )
+}
+```
+
+**Benefits:**
+- Works with multiple editor instances (context is scoped)
+- React-idiomatic state management
+- Easier to test (no window event mocking)
+- Clear data flow
+
+#### 7. Headless UI Pattern
+
+Expose a `useSpellChecker` hook that returns state and actions, letting consumers build custom UI:
+
+```tsx
+// useSpellChecker.ts
+export function useSpellChecker(editor: Editor | null) {
+  const extension = useSpellCheckerExtension(editor)
+  const [isLoading, setIsLoading] = useState(false)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+
+  const toggle = useCallback((enabled?: boolean) => {
+    editor?.commands.toggleSpellChecker(enabled)
+  }, [editor])
+
+  const setLanguage = useCallback(async (lang: LanguageCode) => {
+    setIsLoading(true)
+    try {
+      await editor?.commands.setSpellCheckerLanguage(lang)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [editor])
+
+  return {
+    isEnabled: extension?.options?.enabled ?? false,
+    language: extension?.options?.language ?? 'en',
+    isLoading,
+    contextMenu,
+    toggle,
+    setLanguage,
+    fixWord: (from, to, replacement) => { /* ... */ },
+    fixAllInstances: (word, replacement) => { /* ... */ },
+  }
+}
+
+// Consumer builds custom UI
+function MyCustomSpellChecker({ editor }) {
+  const { isEnabled, toggle, language, setLanguage, contextMenu } = useSpellChecker(editor)
+
+  return (
+    <>
+      <MyCustomToggle checked={isEnabled} onChange={() => toggle()} />
+      <MyCustomLanguageSelect value={language} onChange={setLanguage} />
+      {contextMenu?.visible && (
+        <MyCustomSuggestionMenu suggestions={contextMenu.suggestions} />
+      )}
+    </>
+  )
+}
+```
+
+**Benefits:**
+- Maximum flexibility for different UIs
+- Separates logic from presentation
+- Easier to theme/customize
+- Can be used with any component library
+
+#### 8. Slot/Render Props Pattern
+
+Let the Editor accept UI components as props for clean extension points:
+
+```tsx
+// Editor with slots
+interface EditorProps {
+  extensions: Extension[]
+  slots?: {
+    before?: (props: { editor: Editor }) => ReactNode
+    after?: (props: { editor: Editor }) => ReactNode
+    overlay?: (props: { editor: Editor }) => ReactNode
+  }
+}
+
+function Editor({ extensions, slots }: EditorProps) {
+  const editor = useEditor({ extensions })
+
+  return (
+    <div className="editor-container">
+      {slots?.before?.({ editor })}
+      <EditorContent editor={editor} />
+      {slots?.after?.({ editor })}
+      {slots?.overlay?.({ editor })}
+    </div>
+  )
+}
+
+// Usage - extension UI is passed as slots
+<Editor
+  extensions={[SpellCheckerExtension.configure()]}
+  slots={{
+    before: ({ editor }) => <SpellCheckerControls editor={editor} />,
+    overlay: ({ editor }) => <ContextMenu editor={editor} />,
+  }}
+/>
+```
+
+**Benefits:**
+- Editor remains extension-agnostic
+- Clear extension points for any extension UI
+- Consumer has full control over UI placement
+- Easy to add/remove extension UIs
 
 ### Alternative Approaches
 

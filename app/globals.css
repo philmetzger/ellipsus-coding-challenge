@@ -199,7 +199,6 @@ body {
 /* Spellchecker styles */
 .ProseMirror .spellcheck-misspelled {
   background-color: rgba(254, 226, 226, 0.8); /* Light red background - always visible */
-  cursor: pointer;
   position: relative;
 }
 

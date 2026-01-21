@@ -3,5 +3,4 @@
  * Tiptap/ProseMirror integration layer
  */
 
-export { SpellCheckerExtension } from './SpellCheckerExtension'
-export { createSpellCheckerPlugin } from './SpellCheckerPlugin'
+export { SpellCheckerExtension } from "./SpellCheckerExtension";

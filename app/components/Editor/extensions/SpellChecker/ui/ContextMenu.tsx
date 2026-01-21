@@ -1,18 +1,21 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useRef } from 'react'
-import type { Editor } from '@tiptap/react'
-import type { ContextMenuState } from '../types'
+import { useEffect, useState, useRef } from "react";
+import type { Editor } from "@tiptap/react";
+import type { ContextMenuState } from "../types";
 import {
   CONTEXT_MENU_DELAY_MS,
   SPELLCHECK_CONTEXT_MENU_EVENT,
   SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
-} from '../utils/constants'
-import { contextMenuStyles, hoverHandlers } from './styles'
-import { useSpellCheckerExtension, isSpellCheckerEnabled } from '../hooks/useSpellCheckerExtension'
+} from "../utils/constants";
+import { contextMenuStyles, hoverHandlers } from "./styles";
+import {
+  useSpellCheckerExtension,
+  isSpellCheckerEnabled,
+} from "../hooks/useSpellCheckerExtension";
 
 interface ContextMenuProps {
-  editor: Editor | null
+  editor: Editor | null;
 }
 
 /**
@@ -20,41 +23,47 @@ interface ContextMenuProps {
  * Listens to custom events from the SpellCheckerPlugin
  */
 export function ContextMenu({ editor }: ContextMenuProps) {
-  const [menuState, setMenuState] = useState<ContextMenuState | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const justOpenedRef = useRef<boolean>(false)
+  const [menuState, setMenuState] = useState<ContextMenuState | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const justOpenedRef = useRef<boolean>(false);
 
   // Find spellchecker extension to check enabled state
-  const extension = useSpellCheckerExtension(editor)
+  const extension = useSpellCheckerExtension(editor);
 
   useEffect(() => {
-    if (!editor) return
+    if (!editor) return;
 
     const handleContextMenu = (event: CustomEvent<ContextMenuState>) => {
       // Verify extension is still enabled before showing menu
       const currentExtension = editor?.extensionManager?.extensions?.find(
-        (ext) => ext.name === 'spellChecker'
-      )
+        (ext) => ext.name === "spellChecker",
+      );
       if (!currentExtension?.options?.enabled) {
-        return // Don't show menu if disabled
+        return; // Don't show menu if disabled
       }
-      
-      setMenuState(event.detail)
+
+      setMenuState(event.detail);
       // Mark that menu was just opened to prevent immediate dismissal
-      justOpenedRef.current = true
+      justOpenedRef.current = true;
       // Delay to allow React to render before enabling dismissal
       setTimeout(() => {
-        justOpenedRef.current = false
-      }, CONTEXT_MENU_DELAY_MS)
-    }
+        justOpenedRef.current = false;
+      }, CONTEXT_MENU_DELAY_MS);
+    };
 
     const handleDismiss = () => {
-      setMenuState(null)
-    }
+      setMenuState(null);
+    };
 
     // Listen for context menu events
-    window.addEventListener(SPELLCHECK_CONTEXT_MENU_EVENT, handleContextMenu as EventListener)
-    window.addEventListener(SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT, handleDismiss)
+    window.addEventListener(
+      SPELLCHECK_CONTEXT_MENU_EVENT,
+      handleContextMenu as EventListener,
+    );
+    window.addEventListener(
+      SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
+      handleDismiss,
+    );
 
     // Dismiss on outside click
     // Use mouseup instead of mousedown to avoid conflicts with right-click
@@ -62,55 +71,61 @@ export function ContextMenu({ editor }: ContextMenuProps) {
     const handleClickOutside = (event: MouseEvent) => {
       // Ignore right mouse button clicks (button === 2)
       if (event.button === 2) {
-        return
+        return;
       }
 
       // Don't dismiss if menu was just opened
       if (justOpenedRef.current) {
-        return
+        return;
       }
 
       // Only dismiss if clicking outside the menu
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuState(null)
+        setMenuState(null);
       }
-    }
+    };
 
     // Dismiss on scroll
     const handleScroll = () => {
-      setMenuState(null)
-    }
+      setMenuState(null);
+    };
 
     // Use mouseup instead of mousedown - it fires after contextmenu
-    document.addEventListener('mouseup', handleClickOutside)
-    window.addEventListener('scroll', handleScroll, true)
+    document.addEventListener("mouseup", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true);
 
     return () => {
-      window.removeEventListener(SPELLCHECK_CONTEXT_MENU_EVENT, handleContextMenu as EventListener)
-      window.removeEventListener(SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT, handleDismiss)
-      document.removeEventListener('mouseup', handleClickOutside)
-      window.removeEventListener('scroll', handleScroll, true)
-    }
-  }, [editor])
+      window.removeEventListener(
+        SPELLCHECK_CONTEXT_MENU_EVENT,
+        handleContextMenu as EventListener,
+      );
+      window.removeEventListener(
+        SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT,
+        handleDismiss,
+      );
+      document.removeEventListener("mouseup", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [editor]);
 
   // Monitor enabled state and dismiss menu when disabled
   useEffect(() => {
-    if (!editor) return
+    if (!editor) return;
 
     const currentExtension = editor?.extensionManager?.extensions?.find(
-      (ext) => ext.name === 'spellChecker'
-    )
-    
+      (ext) => ext.name === "spellChecker",
+    );
+
     // Dismiss menu if spellchecker is disabled
     if (!currentExtension?.options?.enabled && menuState) {
-      setMenuState(null)
+      setMenuState(null);
     }
-  }, [editor, menuState])
+  }, [editor, menuState]);
 
   const handleFix = (suggestion: string) => {
-    if (!menuState?.wordRange || !editor) return
+    if (!menuState?.wordRange || !editor) return;
 
-    const { from, to } = menuState.wordRange
+    const { from, to } = menuState.wordRange;
 
     editor
       .chain()
@@ -118,27 +133,31 @@ export function ContextMenu({ editor }: ContextMenuProps) {
       .setTextSelection({ from, to })
       .deleteSelection()
       .insertContent(suggestion)
-      .run()
+      .run();
 
-    setMenuState(null)
-  }
+    setMenuState(null);
+  };
 
   const handleFixAll = (suggestion: string) => {
-    if (!menuState?.word || !editor) return
+    if (!menuState?.word || !editor) return;
 
-    if ('replaceAllInstances' in editor.commands) {
-      ;(editor.commands as { replaceAllInstances: (word: string, replacement: string) => void }).replaceAllInstances(menuState.word, suggestion)
+    if ("replaceAllInstances" in editor.commands) {
+      (
+        editor.commands as {
+          replaceAllInstances: (word: string, replacement: string) => void;
+        }
+      ).replaceAllInstances(menuState.word, suggestion);
     }
 
-    setMenuState(null)
-  }
+    setMenuState(null);
+  };
 
   // Check enabled state before showing menu
-  const isEnabled = isSpellCheckerEnabled(extension)
-  
+  const isEnabled = isSpellCheckerEnabled(extension);
+
   // Show menu if visible and enabled, even if suggestions are empty (will show "No suggestions available")
   if (!menuState?.visible || !isEnabled) {
-    return null
+    return null;
   }
 
   return (
@@ -152,18 +171,14 @@ export function ContextMenu({ editor }: ContextMenuProps) {
       }}
     >
       {/* Header */}
-      <div style={contextMenuStyles.header}>
-        Did you mean:
-      </div>
+      <div style={contextMenuStyles.header}>Did you mean:</div>
 
       {/* Suggestions */}
       {menuState.suggestions.length > 0 ? (
         <div style={contextMenuStyles.suggestionsContainer}>
           {menuState.suggestions.map((suggestion, index) => (
             <div key={index} style={contextMenuStyles.suggestionRow}>
-              <span style={contextMenuStyles.suggestionText}>
-                {suggestion}
-              </span>
+              <span style={contextMenuStyles.suggestionText}>{suggestion}</span>
               <div style={contextMenuStyles.buttonGroup}>
                 <button
                   onClick={() => handleFix(suggestion)}
@@ -191,5 +206,5 @@ export function ContextMenu({ editor }: ContextMenuProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

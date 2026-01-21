@@ -3,4 +3,7 @@
  * React hooks for extension access
  */
 
-export { useSpellCheckerExtension, isSpellCheckerEnabled } from './useSpellCheckerExtension'
+export {
+  useSpellCheckerExtension,
+  isSpellCheckerEnabled,
+} from "./useSpellCheckerExtension";

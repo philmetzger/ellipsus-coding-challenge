@@ -18,13 +18,13 @@ interface SpellCheckerUIProps {
 export function SpellCheckerUI({ editor }: SpellCheckerUIProps) {
   // Find the spellchecker extension using custom hook
   const extension = useSpellCheckerExtension(editor);
-  
+
   // Get storage from extension
   const storage = extension?.storage as SpellCheckerStorage | undefined;
 
-  // Compute initial value safely
+  // Compute initial value safely - default to English
   const getInitialValue = useCallback((): "off" | "en" | "de" => {
-    if (!extension) return "off";
+    if (!extension) return "en";
     const enabled = extension.options?.enabled ?? storage?.enabled ?? true;
     const language = extension.options?.language ?? storage?.language ?? "en";
     return enabled ? language : "off";
@@ -44,45 +44,60 @@ export function SpellCheckerUI({ editor }: SpellCheckerUIProps) {
   }, []); // Only on mount
 
   // Unified handler for spellchecker state changes
-  const handleSpellcheckerChange = useCallback(async (value: "off" | "en" | "de") => {
-    // Prevent rapid switching - if already switching, ignore new request
-    if (isSwitching || !extension) {
-      return;
-    }
-
-    // Optimistic update - update UI immediately
-    setLocalValue(value);
-    setIsLoading(true);
-    setIsSwitching(true);
-
-    try {
-      if (value === "off") {
-        // Disable spellchecker
-        if (editor && "toggleSpellChecker" in editor.commands) {
-          (editor.commands as unknown as { toggleSpellChecker: (enabled: boolean) => void }).toggleSpellChecker(false);
-        }
-      } else {
-        // Select a language - setSpellCheckerLanguage handles enabling automatically
-        // No need to call toggleSpellChecker(true) first - that would double-increment generation
-        if (editor && "setSpellCheckerLanguage" in editor.commands) {
-          await (editor.commands as unknown as { setSpellCheckerLanguage: (lang: string) => Promise<void> }).setSpellCheckerLanguage(value);
-        }
+  const handleSpellcheckerChange = useCallback(
+    async (value: "off" | "en" | "de") => {
+      // Prevent rapid switching - if already switching, ignore new request
+      if (isSwitching || !extension) {
+        return;
       }
-    } catch (error) {
-      console.error("Failed to change spellchecker state:", error);
-      // Revert optimistic update on error
-      const currentEnabled = extension.options?.enabled ?? storage?.enabled ?? true;
-      const currentLanguage = extension.options?.language ?? storage?.language ?? "en";
-      const revertValue: "off" | "en" | "de" = currentEnabled ? currentLanguage : "off";
-      setLocalValue(revertValue);
-    } finally {
-      setIsLoading(false);
-      // Small delay before allowing next switch to prevent rapid toggling
-      setTimeout(() => {
-        setIsSwitching(false);
-      }, 200);
-    }
-  }, [editor, extension, storage, isSwitching]);
+
+      // Optimistic update - update UI immediately
+      setLocalValue(value);
+      setIsLoading(true);
+      setIsSwitching(true);
+
+      try {
+        if (value === "off") {
+          // Disable spellchecker
+          if (editor && "toggleSpellChecker" in editor.commands) {
+            (
+              editor.commands as unknown as {
+                toggleSpellChecker: (enabled: boolean) => void;
+              }
+            ).toggleSpellChecker(false);
+          }
+        } else {
+          // Select a language - setSpellCheckerLanguage handles enabling automatically
+          // No need to call toggleSpellChecker(true) first - that would double-increment generation
+          if (editor && "setSpellCheckerLanguage" in editor.commands) {
+            await (
+              editor.commands as unknown as {
+                setSpellCheckerLanguage: (lang: string) => Promise<void>;
+              }
+            ).setSpellCheckerLanguage(value);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to change spellchecker state:", error);
+        // Revert optimistic update on error
+        const currentEnabled =
+          extension.options?.enabled ?? storage?.enabled ?? true;
+        const currentLanguage =
+          extension.options?.language ?? storage?.language ?? "en";
+        const revertValue: "off" | "en" | "de" = currentEnabled
+          ? currentLanguage
+          : "off";
+        setLocalValue(revertValue);
+      } finally {
+        setIsLoading(false);
+        // Small delay before allowing next switch to prevent rapid toggling
+        setTimeout(() => {
+          setIsSwitching(false);
+        }, 200);
+      }
+    },
+    [editor, extension, storage, isSwitching],
+  );
 
   // If extension not found, don't render anything
   if (!extension) {

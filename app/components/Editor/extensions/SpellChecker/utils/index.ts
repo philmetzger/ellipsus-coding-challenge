@@ -1,8 +1,14 @@
 /**
  * SpellChecker Utilities exports
- * Helper functions and constants
+ * Internal helper functions and constants
  */
 
-export * from './constants'
-export * from './wordExtractor'
-export { debounce } from './debounce'
+export {
+  DEFAULT_DEBOUNCE_MS,
+  DEFAULT_LANGUAGE,
+  SPELLCHECK_MISSPELLED_CLASS,
+  AVAILABLE_LANGUAGES,
+  type LanguageCode,
+} from "./constants";
+export { debounce } from "./debounce";
+// Note: wordExtractor functions are internal, imported directly where needed

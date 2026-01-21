@@ -68,7 +68,7 @@ export const SpellCheckerExtension = Extension.create<
     // Browser-only: Initialize dictionary manager and service
     const dictionaryManager = DictionaryManager.getInstance();
     const spellCheckerService = new SpellCheckerService(dictionaryManager);
-    
+
     // Store service instance in storage so we can clear its cache when language changes
     this.storage.spellCheckerService = spellCheckerService;
 
@@ -90,7 +90,7 @@ export const SpellCheckerExtension = Extension.create<
         if (!this.options.enabled) {
           return; // Don't dispatch if disabled
         }
-        
+
         this.storage.contextMenuState = state;
         // Dispatch custom event for React component
         if (typeof window !== "undefined") {
@@ -118,12 +118,15 @@ export const SpellCheckerExtension = Extension.create<
     return {
       toggleSpellChecker:
         (enabled?: boolean) =>
-        ({ tr, dispatch }: Pick<SpellCheckerCommandProps, 'tr' | 'dispatch'>) => {
+        ({
+          tr,
+          dispatch,
+        }: Pick<SpellCheckerCommandProps, "tr" | "dispatch">) => {
           const newEnabled = enabled ?? !this.storage.enabled;
-          
+
           // Increment generation to invalidate all pending operations
           this.storage.scanGeneration++;
-          
+
           // Update state
           this.storage.enabled = newEnabled;
           this.options.enabled = newEnabled;
@@ -133,34 +136,42 @@ export const SpellCheckerExtension = Extension.create<
             tr.setMeta("spellcheck-update-decorations", true);
             tr.setMeta("spellcheck-decorations", DecorationSet.empty);
             tr.setMeta("spellcheck-generation", this.storage.scanGeneration);
-            
+
             if (!newEnabled) {
               // When disabling: cancel operations, clear caches, dismiss menu
               const dictionaryManager = DictionaryManager.getInstance();
               const workerManager = dictionaryManager.getWorkerManager();
               workerManager.cancelAllPendingRequests();
-              
+
               const spellCheckerService = this.storage.spellCheckerService;
               if (spellCheckerService) {
                 spellCheckerService.clearCache();
               }
-              
+
               // Dismiss context menu if open
               if (this.storage.contextMenuState) {
                 this.storage.contextMenuState = null;
                 if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent(SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT));
+                  window.dispatchEvent(
+                    new CustomEvent(SPELLCHECK_CONTEXT_MENU_DISMISS_EVENT),
+                  );
                 }
               }
             } else {
               // When enabling: load dictionary and trigger scan
               const dictionaryManager = DictionaryManager.getInstance();
-              const currentLanguage = this.options.language ?? this.storage.language;
-              
-              dictionaryManager.loadDictionary(currentLanguage).catch((error) => {
-                console.error("Failed to load dictionary when enabling:", error);
-              });
-              
+              const currentLanguage =
+                this.options.language ?? this.storage.language;
+
+              dictionaryManager
+                .loadDictionary(currentLanguage)
+                .catch((error) => {
+                  console.error(
+                    "Failed to load dictionary when enabling:",
+                    error,
+                  );
+                });
+
               tr.setMeta("spellcheck-trigger-scan", true);
             }
             dispatch(tr);
@@ -175,23 +186,23 @@ export const SpellCheckerExtension = Extension.create<
             // 1. Increment generation to invalidate all pending operations
             this.storage.scanGeneration++;
             const currentGeneration = this.storage.scanGeneration;
-            
+
             // 2. Enable if disabled
             if (!this.options.enabled) {
               this.storage.enabled = true;
               this.options.enabled = true;
             }
-            
+
             // 3. Cancel pending requests and clear caches
             const dictionaryManager = DictionaryManager.getInstance();
             const workerManager = dictionaryManager.getWorkerManager();
             workerManager.cancelAllPendingRequests();
-            
+
             const spellCheckerService = this.storage.spellCheckerService;
             if (spellCheckerService) {
               spellCheckerService.clearCache();
             }
-            
+
             // 4. Clear decorations immediately
             if (dispatch) {
               tr.setMeta("spellcheck-update-decorations", true);
@@ -199,27 +210,27 @@ export const SpellCheckerExtension = Extension.create<
               tr.setMeta("spellcheck-generation", currentGeneration);
               dispatch(tr);
             }
-            
+
             // 5. Load new dictionary
             await dictionaryManager.switchLanguage(language);
-            
+
             // 6. Check if generation changed during async operation
             if (this.storage.scanGeneration !== currentGeneration) {
               // State changed while loading, abort
               return false;
             }
-            
+
             // 7. Update language state
             this.storage.language = language;
             this.options.language = language;
-            
+
             // 8. Trigger rescan - use editor.view.dispatch for second transaction
             // The command's dispatch function doesn't work after first transaction is dispatched
             const newTr = this.editor.state.tr;
             newTr.setMeta("spellcheck-trigger-scan", true);
             newTr.setMeta("spellcheck-generation", currentGeneration);
             this.editor.view.dispatch(newTr);
-            
+
             return commands.focus();
           } catch (error) {
             console.error("Failed to switch language:", error);
@@ -229,7 +240,10 @@ export const SpellCheckerExtension = Extension.create<
 
       replaceMisspelledWord:
         (from: number, to: number, replacement: string) =>
-        ({ tr, dispatch }: Pick<SpellCheckerCommandProps, 'tr' | 'dispatch'>) => {
+        ({
+          tr,
+          dispatch,
+        }: Pick<SpellCheckerCommandProps, "tr" | "dispatch">) => {
           if (dispatch) {
             tr.replaceWith(from, to, this.editor.schema.text(replacement));
             dispatch(tr);
@@ -239,7 +253,7 @@ export const SpellCheckerExtension = Extension.create<
 
       findAllInstances:
         (word: string) =>
-        ({ state }: Pick<SpellCheckerCommandProps, 'state'>) => {
+        ({ state }: Pick<SpellCheckerCommandProps, "state">) => {
           const instances = findAllInstances(state.doc, word);
           return instances.map((inst) => ({ from: inst.from, to: inst.to }));
         },

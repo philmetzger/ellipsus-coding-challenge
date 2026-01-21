@@ -7,11 +7,22 @@ import { useEditorMount } from "./hooks/useEditorMount";
 import { useEditor } from "./hooks/useEditor";
 import { EditorPlaceholder } from "./EditorPlaceholder";
 import { defaultEditorConfig } from "./utils/editorConfig";
-import { SpellCheckerWrapper } from "./extensions/SpellChecker";
 
 /**
  * Main Editor component
  * A clean, extensible Tiptap editor with SSR support
+ *
+ * This component is extension-agnostic. Extension UI (like SpellCheckerWrapper)
+ * should be composed at the usage site, not hardcoded here.
+ *
+ * @example
+ * // With spellchecker UI
+ * <SpellCheckerWrapper editor={editorRef.current}>
+ *   <Editor
+ *     extensions={[SpellCheckerExtension.configure()]}
+ *     onEditorReady={(e) => editorRef.current = e}
+ *   />
+ * </SpellCheckerWrapper>
  */
 export const Editor = ({
   content,
@@ -43,9 +54,7 @@ export const Editor = ({
 
   return (
     <div className={className}>
-      <SpellCheckerWrapper editor={editor}>
-        <EditorContent editor={editor} />
-      </SpellCheckerWrapper>
+      <EditorContent editor={editor} />
     </div>
   );
 };
