@@ -9,7 +9,7 @@ export default function Home() {
             Ellipsus Coding Challenge - TipTap Spellchecker
           </h1>
         </header>
-        <div className="tiptap-container rounded-lg border border-[rgba(0,0,0,0.04)] bg-white">
+        <div className="tiptap-container rounded-3xl border border-[rgba(0,0,0,0.04)] bg-white">
           <TiptapEditor />
         </div>
       </main>
