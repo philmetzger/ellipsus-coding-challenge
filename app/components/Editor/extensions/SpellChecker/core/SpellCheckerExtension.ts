@@ -83,12 +83,21 @@ export const SpellCheckerExtension = Extension.create<
       onContextMenu: (state) => {
         // Verify still enabled before notifying
         if (!this.options.enabled) {
-          return; // Don't notify if disabled
+          return;
         }
 
         this.storage.contextMenuState = state;
-        // Notify React context via callback
-        this.storage.onContextMenuChange?.(state);
+        
+        // Notify via callback if registered, otherwise use DOM event fallback
+        if (this.storage.onContextMenuChange) {
+          this.storage.onContextMenuChange(state);
+        } else {
+          const event = new CustomEvent('spellchecker-context-menu', {
+            detail: state,
+            bubbles: true,
+          });
+          document.dispatchEvent(event);
+        }
       },
       onDismissContextMenu: () => {
         this.storage.contextMenuState = null;

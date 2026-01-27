@@ -302,7 +302,6 @@ export function createSpellCheckerPlugin(
 
       handleDOMEvents: {
         contextmenu: (view, event) => {
-          // Check if enabled
           if (!options.getEnabled()) {
             return false
           }
@@ -322,8 +321,9 @@ export function createSpellCheckerPlugin(
             return false
           }
 
-          // Find decoration at this position
-          const decorationAtPos = decorations.find(pos, pos)
+          // Find decoration at this position (use pos to pos+1 to ensure we find decorations at exact boundaries)
+          const decorationAtPos = decorations.find(pos, pos + 1)
+          
           if (decorationAtPos && decorationAtPos.length > 0) {
             event.preventDefault()
 

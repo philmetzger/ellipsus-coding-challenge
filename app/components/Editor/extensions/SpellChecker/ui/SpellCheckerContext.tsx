@@ -50,7 +50,21 @@ export function SpellCheckerProvider({
 }: SpellCheckerProviderProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
-  // Register callback with extension storage
+  // Listen for DOM events as fallback (in case callback registration fails)
+  useEffect(() => {
+    const handleContextMenuEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<ContextMenuState>;
+      setContextMenu(customEvent.detail);
+    };
+
+    document.addEventListener('spellchecker-context-menu', handleContextMenuEvent);
+
+    return () => {
+      document.removeEventListener('spellchecker-context-menu', handleContextMenuEvent);
+    };
+  }, []);
+
+  // Also try to register callback with extension storage
   useEffect(() => {
     if (!editor) return;
 
@@ -67,7 +81,6 @@ export function SpellCheckerProvider({
     }
 
     return () => {
-      // Cleanup: remove the callback on unmount
       if (storage) {
         storage.onContextMenuChange = undefined;
       }
