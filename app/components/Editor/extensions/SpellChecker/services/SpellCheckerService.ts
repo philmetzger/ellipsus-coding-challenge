@@ -1,7 +1,6 @@
 import { DictionaryManager } from './DictionaryManager'
 import { WorkerManager } from './WorkerManager'
 import { MIN_WORD_LENGTH } from '../utils/constants'
-import { calculateEditDistance } from '../utils/wordExtractor'
 import type { LanguageCode } from '../utils/constants'
 
 /**
@@ -99,10 +98,10 @@ export class SpellCheckerService {
 
   /**
    * Get spelling suggestions for a misspelled word
-   * Ranks suggestions by edit distance to ensure best match is first
+   * Sorts suggestions by length (longest first)
    * @param word - Misspelled word
    * @param language - Language code
-   * @returns Promise that resolves to array of suggested corrections (top 5, best first)
+   * @returns Promise that resolves to array of suggested corrections (top 5, longest first)
    */
   async getSuggestions(word: string, language: LanguageCode): Promise<string[]> {
     const trimmed = word.trim()
@@ -122,24 +121,18 @@ export class SpellCheckerService {
         return []
       }
 
-      // Rank suggestions by edit distance (compare lowercase for accurate distance)
-      const rankedSuggestions = allSuggestions.map((suggestion) => ({
-        suggestion,
-        distance: calculateEditDistance(cacheKeyWord, suggestion.toLowerCase()),
-      }))
+      // Sort suggestions by length (longest first)
+      const sortedSuggestions = [...allSuggestions].sort((a, b) => b.length - a.length)
 
-      // Sort by edit distance (ascending - lower is better)
-      rankedSuggestions.sort((a, b) => a.distance - b.distance)
-
-      // Select top 5
+      // Select top 5 unique suggestions
       const topSuggestions: string[] = []
       const usedSuggestions = new Set<string>()
 
-      for (let i = 0; i < rankedSuggestions.length && topSuggestions.length < 5; i++) {
-        const item = rankedSuggestions[i]
-        if (!usedSuggestions.has(item.suggestion)) {
-          topSuggestions.push(item.suggestion)
-          usedSuggestions.add(item.suggestion)
+      for (let i = 0; i < sortedSuggestions.length && topSuggestions.length < 5; i++) {
+        const suggestion = sortedSuggestions[i]
+        if (!usedSuggestions.has(suggestion)) {
+          topSuggestions.push(suggestion)
+          usedSuggestions.add(suggestion)
         }
       }
 
